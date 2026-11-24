@@ -1,0 +1,23 @@
+name: Caido Action Bench
+description: Collects one Hotpath report per run, compares configured functions with an R2 baseline, and updates the PR comment
+
+inputs:
+  mode:
+    description: "collect uploads one Hotpath report; finalize merges reports and compares or publishes a baseline"
+    required: true
+  config:
+    description: Path to the action-bench YAML config (required in all modes)
+    required: true
+  report:
+    description: Path to one raw Hotpath JSON report (required in collect mode)
+    required: false
+  bucket:
+    description: Cloudflare R2 bucket name
+    required: true
+  github-token:
+    description: Token used to create or update the pull request comment
+    required: false
+
+runs:
+  using: node24
+  main: dist/index.js

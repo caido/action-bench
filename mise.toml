@@ -1,0 +1,13 @@
+[tools]
+node = "24.1.0"
+pnpm = "10.12.1"
+zizmor = "1.25.2"
+
+[tasks.'validate:prod']
+run = "pnpm run lint:prod && pnpm run fmt:prod"
+
+[tasks.'validate:dev']
+run = "pnpm run lint:dev && pnpm run fmt:dev"
+
+[tasks.build]
+run = "pnpm run build"
