@@ -1,0 +1,28 @@
+{
+  "name": "@caido/action-bench",
+  "version": "0.1.0",
+  "private": false,
+  "description": "GitHub Action for comparing Hotpath benchmark reports",
+  "scripts": {
+    "build": "tsc && ncc build lib/main.js -o dist",
+    "lint:prod": "oxlint",
+    "lint:dev": "oxlint --fix",
+    "fmt:dev": "oxfmt",
+    "fmt:prod": "oxfmt --check"
+  },
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/github": "^6.0.1",
+    "@aws-sdk/client-s3": "^3.1176.0",
+    "neverthrow": "^8.2.0",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "@vercel/ncc": "^0.38.4",
+    "oxfmt": "^0.80.0",
+    "oxlint": "^1.95.0",
+    "typescript": "^7.0.2"
+  }
+}

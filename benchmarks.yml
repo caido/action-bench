@@ -1,0 +1,16 @@
+referenceBranch: main
+retention: 5
+
+maxRegressionPercent:
+  timing: 20
+  allocations: 10
+
+benchmarks:
+  sommes/memoire:
+    "hotpath_demo::somme_with_allocations":
+      timing: 50
+    "hotpath_demo::somme_optimisee": {}
+
+  sommes/sqlite:
+    "hotpath_demo::somme_sql_lente": {}
+    "hotpath_demo::somme_sql_optimisee": {}
