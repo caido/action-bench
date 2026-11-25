@@ -80,7 +80,11 @@ export type HotpathReport = {
 };
 
 const parseAverage = (metric: MetricName, value: string): Result<number, string> => {
-  if (metric === "icount") return ok(parseFloat(value));
+  if (metric === "icount") {
+    const result = parseFloat(value);
+
+    return Number.isNaN(result) ? err(`icount value is not a number: ${value}`) : ok(result);
+  }
 
   const match = value.trim().match(/^(-?\d+(?:\.\d+)?)\s*([^\s]*)$/);
   if (!match) return err(`Unrecognized Hotpath ${metric} average: ${value}`);

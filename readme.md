@@ -8,7 +8,7 @@ A GitHub Action that collects one [Hotpath](https://github.com/caido/hotpath) re
 - A final job waits for all benchmark jobs, checks that every configured Criterion group and function was reported, then merges the reports.
 - On a pull request, the final job compares the merged report with the latest baseline for the configured reference branch.
 - On a successful push to that branch, the final job publishes one merged baseline.
-- Temporary reports are deleted after successful finalization. Configure the R2 lifecycle rule below as a fallback for interrupted runs.
+- Temporary reports are deleted after successful finalization.
 - Baselines are stored at `action-bench/<owner>/<repo>/<branch>/<commit-sha>/merged.json`.
 
 ## Configuration
