@@ -31,23 +31,15 @@ function compareMetric(
   const after = currentValues.get(functionId);
 
   if (before === undefined) {
-    return err(
-      `Function is missing from baseline ${metric} data: ${functionId}`,
-    );
+    return err(`Function is missing from baseline ${metric} data: ${functionId}`);
   }
 
   if (after === undefined) {
-    return err(
-      `Configured function is missing from current ${metric} data: ${functionId}`,
-    );
+    return err(`Configured function is missing from current ${metric} data: ${functionId}`);
   }
 
   const deltaPercent =
-    before === 0
-      ? after === 0
-        ? 0
-        : Number.POSITIVE_INFINITY
-      : ((after - before) / before) * 100;
+    before === 0 ? (after === 0 ? 0 : Number.POSITIVE_INFINITY) : ((after - before) / before) * 100;
 
   return ok({
     functionId,
@@ -65,10 +57,7 @@ const normalizeGroup = (group: string): string => group.replace(/\/+$/, "");
 const isInGroup = (benchmarkId: string, group: string): boolean => {
   const normalizedGroup = normalizeGroup(group);
 
-  return (
-    benchmarkId === normalizedGroup ||
-    benchmarkId.startsWith(`${normalizedGroup}/`)
-  );
+  return benchmarkId === normalizedGroup || benchmarkId.startsWith(`${normalizedGroup}/`);
 };
 
 const compare = (
@@ -87,14 +76,10 @@ const compare = (
   const currentEntries = [...currentReports.entries()];
 
   for (const [group, functions] of Object.entries(config.benchmarks)) {
-    const reportsInGroup = currentEntries.filter(([benchmarkId]) =>
-      isInGroup(benchmarkId, group),
-    );
+    const reportsInGroup = currentEntries.filter(([benchmarkId]) => isInGroup(benchmarkId, group));
 
     if (reportsInGroup.length === 0) {
-      return err(
-        `Configured benchmark group is missing from current report: ${group}`,
-      );
+      return err(`Configured benchmark group is missing from current report: ${group}`);
     }
 
     for (const functionId of Object.keys(functions)) {
@@ -113,10 +98,7 @@ const compare = (
   for (const [benchmarkId, current] of currentEntries) {
     const applicableGroups = Object.entries(config.benchmarks)
       .filter(([group]) => isInGroup(benchmarkId, group))
-      .sort(
-        ([left], [right]) =>
-          normalizeGroup(left).length - normalizeGroup(right).length,
-      );
+      .sort(([left], [right]) => normalizeGroup(left).length - normalizeGroup(right).length);
 
     if (applicableGroups.length === 0) continue;
 
@@ -127,9 +109,7 @@ const compare = (
     const baseline = baselineReports.get(benchmarkId);
 
     for (const functionId of functionIds) {
-      const currentHasFunction = metrics.some((metric) =>
-        current[metric].has(functionId),
-      );
+      const currentHasFunction = metrics.some((metric) => current[metric].has(functionId));
 
       if (!currentHasFunction) continue;
 
@@ -147,8 +127,7 @@ const compare = (
       result.trackedFunctionCount += 1;
 
       const baselineHasFunction =
-        baseline !== undefined &&
-        metrics.some((metric) => baseline[metric].has(functionId));
+        baseline !== undefined && metrics.some((metric) => baseline[metric].has(functionId));
 
       if (!baselineHasFunction) {
         result.newFunctions.push(displayId);
@@ -160,13 +139,7 @@ const compare = (
 
         if (threshold === undefined) continue;
 
-        const comparison = compareMetric(
-          metric,
-          current,
-          baseline,
-          functionId,
-          threshold,
-        );
+        const comparison = compareMetric(metric, current, baseline, functionId, threshold);
 
         if (comparison.isErr()) {
           return err(`${benchmarkId}: ${comparison.error}`);

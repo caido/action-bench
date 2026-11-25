@@ -1,12 +1,6 @@
 import { err, ok, Result, ResultAsync } from "neverthrow";
 import { UseR2Client } from "../r2";
-import {
-  Config,
-  MergedReport,
-  MergeUtils,
-  ParserUtils,
-  toErrorMessage,
-} from "../utils";
+import { Config, MergedReport, MergeUtils, ParserUtils, toErrorMessage } from "../utils";
 import { Context } from "@actions/github/lib/context";
 import { updatePullRequestComment } from "./comment";
 import { CompareUtils } from "./compare";
@@ -19,9 +13,7 @@ export const finalizeRun = async (
 ): Promise<Result<string, string>> => {
   const temporaryKeys = await client.listTemporaryObject();
   if (temporaryKeys.length === 0)
-    return err(
-      `No reports were collected for this run (${client.temporaryPrefix})`,
-    );
+    return err(`No reports were collected for this run (${client.temporaryPrefix})`);
 
   const reportResults = await Promise.all(
     temporaryKeys.map((key) =>
@@ -35,9 +27,7 @@ export const finalizeRun = async (
 
   if (firstError?.isErr()) return err(firstError.error);
 
-  const rawReports = reportResults.flatMap((result) =>
-    result.isOk() ? [result.value] : [],
-  );
+  const rawReports = reportResults.flatMap((result) => (result.isOk() ? [result.value] : []));
 
   const mergedJson = MergeUtils.reports(rawReports);
 
@@ -50,32 +40,23 @@ export const finalizeRun = async (
   const currentBenchmarkIds = [...currentReports.value.keys()];
 
   const missingBenchmarkGroups = Object.keys(config.benchmarks).filter(
-    (group) =>
-      !currentBenchmarkIds.some(
-        (id) => id === group || id.startsWith(`${group}/`),
-      ),
+    (group) => !currentBenchmarkIds.some((id) => id === group || id.startsWith(`${group}/`)),
   );
 
   if (missingBenchmarkGroups.length > 0) {
-    return err(
-      `Missing configured benchmark group(s): ${missingBenchmarkGroups.join(", ")}`,
-    );
+    return err(`Missing configured benchmark group(s): ${missingBenchmarkGroups.join(", ")}`);
   }
   const eventName = context.eventName;
 
-  if (eventName === "push")
-    return onPush(client, context, config, temporaryKeys, mergedJson.value);
+  if (eventName === "push") return onPush(client, context, config, temporaryKeys, mergedJson.value);
 
-  if (eventName !== "pull_request")
-    return onOtherEvent(client, eventName, temporaryKeys);
+  if (eventName !== "pull_request") return onOtherEvent(client, eventName, temporaryKeys);
 
   const baseline = await client.latestBaseline();
 
   if (baseline === undefined) {
     await client.deleteTemporaryObjects(temporaryKeys);
-    return ok(
-      `No baseline exists for ${config.referenceBranch}; comparison skipped`,
-    );
+    return ok(`No baseline exists for ${config.referenceBranch}; comparison skipped`);
   }
 
   const baselineContent = await client.readObject(baseline.key);
@@ -87,11 +68,7 @@ export const finalizeRun = async (
   const baselineReports = ParserUtils.flatReports(baselineMerged.value);
   if (baselineReports.isErr()) return err(baselineReports.error);
 
-  const comparison = CompareUtils.compare(
-    config,
-    currentReports.value,
-    baselineReports.value,
-  );
+  const comparison = CompareUtils.compare(config, currentReports.value, baselineReports.value);
 
   if (comparison.isErr()) return err(comparison.error);
 
@@ -101,19 +78,13 @@ export const finalizeRun = async (
     ...comparison.value.icount,
   ].some((change) => change.exceedsThreshold);
 
-  const comment = await updatePullRequestComment(
-    token,
-    comparison.value,
-    hasRegressionDetected,
-  );
+  const comment = await updatePullRequestComment(token, comparison.value, hasRegressionDetected);
   if (comment.isErr()) return err(comment.error);
 
   await client.deleteTemporaryObjects(temporaryKeys);
 
   if (hasRegressionDetected) {
-    return err(
-      "One or more benchmark metrics exceeded their regression threshold",
-    );
+    return err("One or more benchmark metrics exceeded their regression threshold");
   }
 
   return ok("every benchmark respect is own threshold");
@@ -138,11 +109,7 @@ const onPush = async (
   return ok(`Published baseline ${client.baselineKey}`);
 };
 
-const onOtherEvent = async (
-  client: UseR2Client,
-  eventName: string,
-  temporaryKeys: string[],
-) => {
+const onOtherEvent = async (client: UseR2Client, eventName: string, temporaryKeys: string[]) => {
   await client.deleteTemporaryObjects(temporaryKeys);
   return ok(`Ignoring event ${eventName}`);
 };

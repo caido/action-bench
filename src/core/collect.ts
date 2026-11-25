@@ -14,10 +14,7 @@ export const collectReports = async (
     async (report) => {
       const benchmark = report.meta.criterion.benchmark;
 
-      const key = await client.uploadTemporaryReport(
-        benchmark,
-        JSON.stringify(report),
-      );
+      const key = await client.uploadTemporaryReport(benchmark, JSON.stringify(report));
 
       return ok(`Collected Hotpath report for ${benchmark} at ${key}`);
     },

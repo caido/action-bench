@@ -64,8 +64,7 @@ export const useR2Client = (options: {
     return (await listObjects(temporaryPrefix)).map(({ key }) => key);
   };
 
-  const deleteTemporaryObjects = async (keys: string[]) =>
-    await deleteObjects(keys);
+  const deleteTemporaryObjects = async (keys: string[]) => await deleteObjects(keys);
 
   const uploadBaseline = async (contents: string): Promise<void> => {
     await client.send(
@@ -83,9 +82,7 @@ export const useR2Client = (options: {
     objects.sort((a, b) => b.modified.getTime() - a.modified.getTime());
 
     for (const object of objects.slice(retention)) {
-      await client.send(
-        new DeleteObjectCommand({ Bucket: bucket, Key: object.key }),
-      );
+      await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: object.key }));
     }
   };
 
@@ -120,9 +117,7 @@ export const useR2Client = (options: {
   };
 
   const readObject = async (key: string): Promise<Result<string, string>> => {
-    const result = await client.send(
-      new GetObjectCommand({ Bucket: bucket, Key: key }),
-    );
+    const result = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
     if (!result.Body) return err(`S3 object has no body: ${key}`);
     return ok(await result.Body.transformToString("utf-8"));
   };
