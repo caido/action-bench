@@ -29,7 +29,7 @@ const run = async (): Promise<RunResult> => {
 
   if (config.isErr()) return err(config.error);
 
-  const client = useR2Client({
+  const client = await useR2Client({
     bucket,
     owner,
     repo,
@@ -39,11 +39,13 @@ const run = async (): Promise<RunResult> => {
     sha: github.context.sha,
   });
 
+  if (client.isErr()) return err(client.error);
+
   let result;
 
   switch (mode.value) {
     case Mode.COLLECT: {
-      result = await collectReports(client, core.getInput("report", { required: true }));
+      result = await collectReports(client.value, core.getInput("report", { required: true }));
       break;
     }
     case Mode.FINALIZE: {
@@ -51,14 +53,14 @@ const run = async (): Promise<RunResult> => {
         return err("github-token is required when finalizing a pull request");
       }
 
-      result = await finalizeRun(client, github.context, token, config.value);
+      result = await finalizeRun(client.value, github.context, token, config.value);
       break;
     }
   }
 
   if (result.isErr()) {
-    const temporaryKeys = await client.listTemporaryObject();
-    await client.deleteTemporaryObjects(temporaryKeys);
+    const temporaryKeys = await client.value.listTemporaryObject();
+    await client.value.deleteTemporaryObjects(temporaryKeys);
   }
 
   return result;

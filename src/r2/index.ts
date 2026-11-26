@@ -1,23 +1,23 @@
 import {
+  BucketAlreadyOwnedByYou,
+  CreateBucketCommand,
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadBucketCommand,
   ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
+  S3ServiceException,
+  waitUntilBucketExists,
 } from "@aws-sdk/client-s3";
 import { err, ok, Result } from "neverthrow";
-
-function requiredEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) throw new Error(`Missing environment variable ${name}`);
-  return value;
-}
+import { safeRequireEnv, toErrorMessage } from "../utils";
 
 type ListedObject = { key: string; modified: Date };
 
-export type UseR2Client = ReturnType<typeof useR2Client>;
+export type UseR2Client = ReturnType<typeof createR2Methods>;
 
-export const useR2Client = (options: {
+type R2Options = {
   bucket: string;
   owner: string;
   repo: string;
@@ -25,24 +25,84 @@ export const useR2Client = (options: {
   attempt: string;
   branch: string;
   sha: string;
-}) => {
+};
+
+const createClient = () => {
+  const accountId = safeRequireEnv("R2_ACCOUNT_ID");
+  const accessKeyId = safeRequireEnv("R2_ACCESS_KEY_ID");
+  const secretAccessKey = safeRequireEnv("R2_SECRET_ACCESS_KEY");
+
+  if (accountId.isErr()) return err(accountId.error);
+  if (accessKeyId.isErr()) return err(accessKeyId.error);
+  if (secretAccessKey.isErr()) return err(secretAccessKey.error);
+
+  return ok(
+    new S3Client({
+      region: "auto",
+      endpoint: `https://${accountId.value}.r2.cloudflarestorage.com`,
+      credentials: {
+        accessKeyId: accessKeyId.value,
+        secretAccessKey: secretAccessKey.value,
+      },
+    }),
+  );
+};
+
+const ensureBucketExists = async (
+  client: S3Client,
+  bucket: string,
+): Promise<Result<string, string>> => {
+  try {
+    await client.send(new HeadBucketCommand({ Bucket: bucket }));
+    return ok(bucket);
+  } catch (error) {
+    if (!(error instanceof S3ServiceException)) return err(toErrorMessage(error));
+
+    const status = error.$metadata.httpStatusCode;
+    if (status === 403) {
+      return err(
+        `Access denied to "${bucket}": it may belong to another account, or you lack permission.`,
+      );
+    }
+    if (status !== 404) return err(toErrorMessage(error));
+  }
+
+  try {
+    await client.send(
+      new CreateBucketCommand({
+        Bucket: bucket,
+      }),
+    );
+  } catch (error) {
+    if (!(error instanceof BucketAlreadyOwnedByYou)) return err(toErrorMessage(error));
+  }
+
+  await waitUntilBucketExists({ client, maxWaitTime: 60 }, { Bucket: bucket });
+
+  return ok(bucket);
+};
+
+export const useR2Client = async (options: R2Options): Promise<Result<UseR2Client, string>> => {
+  const clientResult = createClient();
+
+  if (clientResult.isErr()) return err(clientResult.error);
+
+  const client = clientResult.value;
+
+  const doesExists = await ensureBucketExists(client, options.bucket);
+  if (doesExists.isErr()) return err(doesExists.error);
+
+  return ok(createR2Methods(client, options));
+};
+
+const createR2Methods = (client: S3Client, options: R2Options) => {
   const { bucket, owner, repo, runId, attempt, branch, sha } = options;
-  const accountId = requiredEnv("R2_ACCOUNT_ID");
 
   const temporaryPrefix = `action-bench/tmp/${owner}/${repo}/${runId}/${attempt}/`;
 
   const baselinePrefix = `action-bench/${owner}/${repo}/${encodeURIComponent(branch)}/`;
 
   const baselineKey = `${baselinePrefix}${sha}/merged.json`;
-
-  const client = new S3Client({
-    region: "auto",
-    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId: requiredEnv("R2_ACCESS_KEY_ID"),
-      secretAccessKey: requiredEnv("R2_SECRET_ACCESS_KEY"),
-    },
-  });
 
   const uploadTemporaryReport = async (benchmark: string, contents: string) => {
     const key = `${temporaryPrefix}${encodeURIComponent(benchmark)}.json`;
